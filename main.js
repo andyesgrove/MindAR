@@ -1,3 +1,6 @@
-import * as THREE from '../../libs/three.js-r132/build/three.module.js';
+// Now just import from 'three' - the import map handles the rest
+import * as THREE from 'three';
+import { MindARThree } from 'mindar-image-three';
 
 console.log("THREE", THREE);
+
