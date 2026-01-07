@@ -22,6 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
   renderer.setSize(500, 500);
   renderer.render(scene, camera);
 
+  const video = document.createElement("video");
+  navigator.mediaDevices.getUserMedia({video: true}).then((stream) => {
+    video.srcObject = stream;
+    video.play();
+  });
+
+  video.style.position = "absolute";
+  video.style.width = renderer.domElement.width;
+  video.style.height = renderer.domElement.height;
+  renderer.domElement.style.position = "absolute";
+
+  document.body.appendChild(video);
   document.body.appendChild(renderer.domElement);
 
 });
