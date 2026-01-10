@@ -1,25 +1,23 @@
-// Move imports to the TOP of the file (outside any functions)
 import * as THREE from 'three';
 import { MindARThree } from 'mindar-image-three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const start = async() => {
-    // initialize MindAR 
     const mindarThree = new MindARThree({
       container: document.body,
       imageTargetSrc: './assets/targets/targets.mind',
     });
     const {renderer, scene, camera} = mindarThree;
     
-    // create light
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
     scene.add(light);
     
-    // create anchor
     const anchor = mindarThree.addAnchor(0);
     
-    // load and add raccoon model - WITH DEBUG LOGS
+    // Load raccoon
     const loader = new GLTFLoader();
     console.log('Loading raccoon model...');
     loader.load(
@@ -39,36 +37,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     );
     
-    // start AR
+    // Add 3D text above the model
+    const fontLoader = new FontLoader();
+    fontLoader.load(
+      'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
+      (font) => {
+        const textGeometry = new TextGeometry('Hello AR!', {
+          font: font,
+          size: 0.1,
+          height: 0.02,
+        });
+        textGeometry.center(); // Center the text
+        
+        const textMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+        textMesh.position.set(0, 0.3, 0); // Position above raccoon
+        
+        anchor.group.add(textMesh);
+      }
+    );
+    
     await mindarThree.start();
     renderer.setAnimationLoop(() => {
       renderer.render(scene, camera);
     });
   }
-
-
-  // Add after loading the raccoon, inside your start function
-
-// Create canvas for text
-const canvas = document.createElement('canvas');
-const context = canvas.getContext('2d');
-canvas.width = 512;
-canvas.height = 128;
-
-// Draw text on canvas
-context.fillStyle = '#ffffff';
-context.font = 'bold 48px Arial';
-context.textAlign = 'center';
-context.fillText('Hello AR!', 256, 64);
-
-// Create sprite from canvas
-const texture = new THREE.CanvasTexture(canvas);
-const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-const sprite = new THREE.Sprite(spriteMaterial);
-sprite.position.set(0, 0.3, 0); // Above the raccoon
-sprite.scale.set(0.5, 0.125, 1); // Adjust size
-
-anchor.group.add(sprite);
-
   start();
 });
