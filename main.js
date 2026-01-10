@@ -1,9 +1,10 @@
 // Move imports to the TOP of the file (outside any functions)
-import {loadGLTF} from "./libs/loader.js";
-import * as THREE from 'three';
+
+//import * as THREE from 'three';
+const THREE = window.MINDAR.IMAGE.THREE;
 import {loadGLTF} from "./libs/three.js-r132/examples/jsm/loadersloader.js";
 //import {mockWithVideo} from '../../libs/camera-mock';
-import { MindARThree } from 'mindar-image-three';
+//import { MindARThree } from 'mindar-image-three';
 
 document.addEventListener('DOMContentLoaded', () => {
   const start = async() => {
@@ -14,6 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const {renderer, scene, camera} = mindarThree;
     
+    // create light
+    const light = new THREE.HemisphereLight( 0xffffff, 0xbbbbff, 1 );
+    scene.add(light);
+
     // create AR object
     const geometry = new THREE.PlaneGeometry(1, 1);
     const material = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.5});
