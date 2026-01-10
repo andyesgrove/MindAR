@@ -1,4 +1,5 @@
 // Move imports to the TOP of the file (outside any functions)
+import {loadGLTF} from "./libs/loader.js";
 import * as THREE from 'three';
 import { MindARThree } from 'mindar-image-three';
 
@@ -19,6 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // create anchor
     const anchor = mindarThree.addAnchor(0);
     anchor.group.add(plane);
+
+    const raccoon = await loadGLTF('../../assets/models/musicband-raccoon/scene.gltf');
+    raccoon.scene.scale.set(0.1, 0.1, 0.1);
+    raccoon.scene.position.set(0, -0.4, 0);
+
+    const anchor = mindarThree.addAnchor(0);
+    anchor.group.add(raccoon.scene);
     
     // start AR
     await mindarThree.start();
