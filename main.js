@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
       './assets/models/musicband-raccoon/scene.gltf', 
       (gltf) => {
         const raccoon = gltf.scene;
-        raccoon.scale.set(0.1, 0.1, 0.1);
+        raccoon.scale.set(0.05, 0.05, 0.05);
         raccoon.position.set(0, -0.4, 0);
         anchor.group.add(raccoon);
       }
