@@ -45,5 +45,30 @@ document.addEventListener('DOMContentLoaded', () => {
       renderer.render(scene, camera);
     });
   }
+
+
+  // Add after loading the raccoon, inside your start function
+
+// Create canvas for text
+const canvas = document.createElement('canvas');
+const context = canvas.getContext('2d');
+canvas.width = 512;
+canvas.height = 128;
+
+// Draw text on canvas
+context.fillStyle = '#ffffff';
+context.font = 'bold 48px Arial';
+context.textAlign = 'center';
+context.fillText('Hello AR!', 256, 64);
+
+// Create sprite from canvas
+const texture = new THREE.CanvasTexture(canvas);
+const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+const sprite = new THREE.Sprite(spriteMaterial);
+sprite.position.set(0, 0.3, 0); // Above the raccoon
+sprite.scale.set(0.5, 0.125, 1); // Adjust size
+
+anchor.group.add(sprite);
+
   start();
 });
