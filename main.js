@@ -1,6 +1,8 @@
 // Move imports to the TOP of the file (outside any functions)
 import {loadGLTF} from "./libs/loader.js";
 import * as THREE from 'three';
+import {loadGLTF} from "./libs/three.js-r132/examples/jsm/loadersloader.js";
+//import {mockWithVideo} from '../../libs/camera-mock';
 import { MindARThree } from 'mindar-image-three';
 
 document.addEventListener('DOMContentLoaded', () => {
