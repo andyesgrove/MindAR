@@ -5,6 +5,10 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 const WORKER_URL = 'https://liverpool-fixtures.andyesgrove.workers.dev';
+const UPDATE_INTERVAL = 60000; // Check for updates every 60 seconds (1 minute)
+
+let currentTextMesh = null;
+let anchor = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   const start = async() => {
@@ -17,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
     scene.add(light);
     
-    const anchor = mindarThree.addAnchor(0);
+    anchor = mindarThree.addAnchor(0);
     
     // Load raccoon
     const loader = new GLTFLoader();
@@ -25,19 +29,19 @@ document.addEventListener('DOMContentLoaded', () => {
       './assets/models/musicband-raccoon/scene.gltf', 
       (gltf) => {
         const raccoon = gltf.scene;
-        raccoon.scale.set(0.05, 0.05, 0.05);
+        raccoon.scale.set(0.1, 0.1, 0.1);
         raccoon.position.set(0, -0.4, 0);
         anchor.group.add(raccoon);
       }
     );
     
-    // Fetch fixture
-    const getNextFixture = async () => {
+    // Fetch and update fixture text
+    const updateFixtureText = async () => {
       try {
         const response = await fetch(WORKER_URL);
         const data = await response.json();
         
-        console.log('Fixture data:', data);
+        console.log('Fixture data updated:', data);
         
         if (data.success) {
           const { homeTeam, awayTeam, date } = data.fixture;
@@ -46,36 +50,45 @@ document.addEventListener('DOMContentLoaded', () => {
             month: 'short'
           });
           
-          return `${homeTeam} vs\n${awayTeam}\n${matchDate}`;
+          const fixtureText = `${homeTeam} vs\n${awayTeam}\n${matchDate}`;
+          
+          // Remove old text if it exists
+          if (currentTextMesh) {
+            anchor.group.remove(currentTextMesh);
+            currentTextMesh.geometry.dispose();
+            currentTextMesh.material.dispose();
+          }
+          
+          // Create new text
+          const fontLoader = new FontLoader();
+          fontLoader.load(
+            'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
+            (font) => {
+              const textGeometry = new TextGeometry(fixtureText, {
+                font: font,
+                size: 0.06,
+                height: 0.02,
+              });
+              textGeometry.center();
+              
+              const textMaterial = new THREE.MeshBasicMaterial({ color: 0x0066cc });
+              currentTextMesh = new THREE.Mesh(textGeometry, textMaterial);
+              currentTextMesh.position.set(0, 0.3, 0);
+              
+              anchor.group.add(currentTextMesh);
+            }
+          );
         }
-        return 'AFC Whyteleafe';
       } catch (error) {
-        console.error('Error fetching fixture:', error);
-        return 'AFC Whyteleafe';
+        console.error('Error updating fixture:', error);
       }
     };
     
-    // Get fixture text and create 3D text
-    const fixtureText = await getNextFixture();
+    // Initial load
+    await updateFixtureText();
     
-    const fontLoader = new FontLoader();
-    fontLoader.load(
-      'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
-      (font) => {
-        const textGeometry = new TextGeometry(fixtureText, {
-          font: font,
-          size: 0.06,
-          height: 0.02,
-        });
-        textGeometry.center();
-        
-        const textMaterial = new THREE.MeshBasicMaterial({ color: 0x0066cc }); // Blue
-        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-        textMesh.position.set(0, 0.3, 0);
-        
-        anchor.group.add(textMesh);
-      }
-    );
+    // Auto-update every minute
+    setInterval(updateFixtureText, UPDATE_INTERVAL);
     
     await mindarThree.start();
     renderer.setAnimationLoop(() => {
