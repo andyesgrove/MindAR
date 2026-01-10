@@ -4,9 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
-// Set this to your Cloudflare Worker URL
 const WORKER_URL = 'https://liverpool-fixtures.andyesgrove.workers.dev';
-const TEST_MODE = true; // Set to false for live data
 
 document.addEventListener('DOMContentLoaded', () => {
   const start = async() => {
@@ -33,25 +31,27 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     );
     
-    // Fetch Liverpool's next fixture
+    // Fetch fixture
     const getNextFixture = async () => {
       try {
-        const url = TEST_MODE ? `${WORKER_URL}?test=true` : WORKER_URL;
-        const response = await fetch(url);
+        const response = await fetch(WORKER_URL);
         const data = await response.json();
         
         console.log('Fixture data:', data);
         
         if (data.success) {
           const { homeTeam, awayTeam, date } = data.fixture;
-          const matchDate = new Date(date).toLocaleDateString();
+          const matchDate = new Date(date).toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short'
+          });
           
-          return `${homeTeam} vs ${awayTeam}\n${matchDate}`;
+          return `${homeTeam} vs\n${awayTeam}\n${matchDate}`;
         }
-        return 'No fixtures found';
+        return 'AFC Whyteleafe';
       } catch (error) {
         console.error('Error fetching fixture:', error);
-        return 'Liverpool FC';
+        return 'AFC Whyteleafe';
       }
     };
     
@@ -64,12 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
       (font) => {
         const textGeometry = new TextGeometry(fixtureText, {
           font: font,
-          size: 0.08,
+          size: 0.06,
           height: 0.02,
         });
         textGeometry.center();
         
-        const textMaterial = new THREE.MeshBasicMaterial({ color: 0xC8102E }); // Liverpool red
+        const textMaterial = new THREE.MeshBasicMaterial({ color: 0x0066cc }); // Blue
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
         textMesh.position.set(0, 0.3, 0);
         
