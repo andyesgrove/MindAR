@@ -5,7 +5,7 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 // Set this to your Cloudflare Worker URL
-const WORKER_URL = 'https://liverpool-fixtures.YOUR-USERNAME.workers.dev';
+const WORKER_URL = 'https://liverpool-fixtures.andyesgrove.workers.dev';
 const TEST_MODE = true; // Set to false for live data
 
 document.addEventListener('DOMContentLoaded', () => {
