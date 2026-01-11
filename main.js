@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load raccoon
     const loader = new GLTFLoader();
     loader.load(
-      './assets/models/musicband-raccoon/scene.gltf', 
+      './assets/models/AFCWhyteleafeLogoC4D.gltf', 
       (gltf) => {
         const raccoon = gltf.scene;
         raccoon.scale.set(0.05, 0.05, 0.05);
