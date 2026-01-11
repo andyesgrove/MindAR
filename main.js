@@ -31,8 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
       './assets/models/AFCWhyteleafeLogoC4D.gltf', 
       (gltf) => {
         const raccoon = gltf.scene;
-        raccoon.scale.set(0.05, 0.05, 0.05);
-        raccoon.position.set(0, -0.4, 0);
+        raccoon.scale.set(0.02, 0.02, 0.02);
+        raccoon.position.set(0, 0, 0);
         anchor.group.add(raccoon);
       }
     );
