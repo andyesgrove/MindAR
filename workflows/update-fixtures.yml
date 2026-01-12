@@ -2,7 +2,8 @@ name: Update Fixtures
 
 on:
   schedule:
-    # Run every day at 8 AM UTC
+    # Run every day at 8 AM UTC need to change this
+
     - cron: '0 8 * * *'
   workflow_dispatch: # Allow manual trigger
 
