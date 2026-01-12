@@ -1,126 +1,193 @@
-import * as THREE from 'three';
-import { MindARThree } from 'mindar-image-three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-
-const WORKER_URL = 'https://liverpool-fixtures.andyesgrove.workers.dev';
-const UPDATE_INTERVAL = 30000; // Check every 30 seconds
-
-let currentTextMesh = null;
-let anchor = null;
-let loadedFont = null;
-let lastFixtureData = null;
-
-document.addEventListener('DOMContentLoaded', () => {
-  const start = async() => {
-    const mindarThree = new MindARThree({
-      container: document.body,
-      imageTargetSrc: './assets/targets/targets.mind',
-    });
-    const {renderer, scene, camera} = mindarThree;
-    
-    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-    scene.add(light);
-    
-    anchor = mindarThree.addAnchor(0);
-    
-    // Load raccoon
-    const loader = new GLTFLoader();
-    loader.load(
-      './assets/models/AFCWhyteleafeLogoC4D.gltf', 
-      (gltf) => {
-        const raccoon = gltf.scene;
-        raccoon.scale.set(0.02, 0.02, 0.02);
-        raccoon.position.set(0, 0, 0);
-        anchor.group.add(raccoon);
-      }
-    );
-    
-    // Pre-load font once
-    const fontLoader = new FontLoader();
-    fontLoader.load(
-      'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
-      (font) => {
-        loadedFont = font;
-        console.log('Font loaded successfully');
-        updateFixtureText(); // Initial load after font is ready
-      }
-    );
-    
-    // Function to create/update text
-    const createTextMesh = (fixtureText) => {
-      if (!loadedFont) {
-        console.log('Font not loaded yet, skipping...');
-        return;
-      }
-      
-      // Remove old text if it exists
-      if (currentTextMesh) {
-        console.log('Removing old text mesh');
-        anchor.group.remove(currentTextMesh);
-        currentTextMesh.geometry.dispose();
-        currentTextMesh.material.dispose();
-      }
-      
-      // Create new text
-      const textGeometry = new TextGeometry(fixtureText, {
-        font: loadedFont,
-        size: 0.06,
-        height: 0.02,
-      });
-      textGeometry.center();
-      
-      const textMaterial = new THREE.MeshBasicMaterial({ color: 0x0066cc });
-      currentTextMesh = new THREE.Mesh(textGeometry, textMaterial);
-      currentTextMesh.position.set(0, 0.3, 0);
-      
-      anchor.group.add(currentTextMesh);
-      console.log('New text mesh added:', fixtureText);
+export default {
+  async fetch(request, env) {
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
     };
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    const url = new URL(request.url);
     
-    // Fetch and update fixture text
-    const updateFixtureText = async () => {
+    // SCRAPE MODE: Scrape and return fixture data
+    if (url.searchParams.get('scrape') === 'true') {
       try {
-        console.log('Checking for fixture updates...', new Date().toLocaleTimeString());
-        const response = await fetch(WORKER_URL + '?cb=' + Date.now()); // Cache bust
-        const data = await response.json();
-        
-        console.log('Fixture data received:', data);
-        
-        if (data.success) {
-          const { homeTeam, awayTeam, date } = data.fixture;
-          
-          // Check if data has changed
-          const fixtureString = JSON.stringify(data.fixture);
-          if (fixtureString === lastFixtureData) {
-            console.log('No changes detected');
-            return;
+        const fixturesResponse = await fetch(
+          'https://www.footballwebpages.co.uk/afc-whyteleafe',
+          {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
           }
-          
-          console.log('Fixture data changed! Updating...');
-          lastFixtureData = fixtureString;
-          
-          const matchDate = new Date(date).toLocaleDateString('en-GB', {
-            day: 'numeric',
-            month: 'short'
-          });
-          
-          const fixtureText = `${homeTeam} vs\n${awayTeam}\n${matchDate}`;
-          createTextMesh(fixtureText);
+        );
+        
+        if (!fixturesResponse.ok) {
+          throw new Error(`HTTP ${fixturesResponse.status}`);
         }
+        
+        const html = await fixturesResponse.text();
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let nextFixture = null;
+        
+        // DEBUG: Add parameter to see what we're finding
+        const debug = url.searchParams.get('debug') === 'true';
+        
+        // Pattern: Look for date headers like "Tuesday 13th January 2026"
+        const dateHeaderPattern = /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(\d+)(?:st|nd|rd|th)\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/gi;
+        const dateMatches = [...html.matchAll(dateHeaderPattern)];
+        
+        if (debug) {
+          return new Response(JSON.stringify({
+            debug: true,
+            todayDate: today.toISOString().split('T')[0],
+            datesFound: dateMatches.length,
+            dates: dateMatches.map(m => m[0]),
+            htmlLength: html.length,
+            htmlSample: html.substring(0, 3000)
+          }, null, 2), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        if (dateMatches.length > 0) {
+          const monthMap = {
+            'january': '01', 'february': '02', 'march': '03', 'april': '04',
+            'may': '05', 'june': '06', 'july': '07', 'august': '08',
+            'september': '09', 'october': '10', 'november': '11', 'december': '12'
+          };
+          
+          for (const dateMatch of dateMatches) {
+            const day = dateMatch[1].padStart(2, '0');
+            const month = monthMap[dateMatch[2].toLowerCase()];
+            const year = dateMatch[3];
+            const isoDate = `${year}-${month}-${day}`;
+            const fixtureDate = new Date(year, parseInt(month) - 1, parseInt(day));
+            
+            // Only look at future dates
+            if (fixtureDate >= today) {
+              // Get a chunk of HTML around this date
+              const matchIndex = dateMatch.index;
+              const htmlChunk = html.substring(matchIndex, matchIndex + 1500);
+              
+              // Look for competition name
+              const competitionPattern = /([\w\s]+(?:Cup|League|Trophy|Shield|Vase|Bowl)(?:\s+[\w\s]+)?)/i;
+              const competitionMatch = htmlChunk.match(competitionPattern);
+              const competition = competitionMatch ? competitionMatch[1].trim() : 'Combined Counties League';
+              
+              // Look for team names
+              const awayPattern = /([\w\s&'-]+)\s*AFC Whyteleafe/i;
+              const homePattern = /AFC Whyteleafe\s*([\w\s&'-]+)/i;
+              
+              let homeTeam = 'AFC Whyteleafe';
+              let awayTeam = 'TBD';
+              let venue = 'Church Road';
+              
+              const awayMatch = htmlChunk.match(awayPattern);
+              const homeMatch = htmlChunk.match(homePattern);
+              
+              if (awayMatch) {
+                homeTeam = awayMatch[1].trim();
+                awayTeam = 'AFC Whyteleafe';
+                venue = 'Away';
+              } else if (homeMatch) {
+                awayTeam = homeMatch[1].trim();
+              }
+              
+              // Clean up team names
+              homeTeam = homeTeam.replace(/\s+/g, ' ').trim();
+              awayTeam = awayTeam.replace(/\s+/g, ' ').trim();
+              
+              nextFixture = {
+                homeTeam: homeTeam,
+                awayTeam: awayTeam,
+                date: isoDate,
+                competition: competition,
+                venue: venue
+              };
+              break;
+            }
+          }
+        }
+        
+        // Fallback if nothing found
+        if (!nextFixture) {
+          nextFixture = {
+            homeTeam: 'AFC Whyteleafe',
+            awayTeam: 'Next opponent TBD',
+            date: '2026-01-18',
+            competition: 'Combined Counties League',
+            venue: 'Church Road'
+          };
+        }
+        
+        const scrapedData = {
+          success: true,
+          scraped: true,
+          fixture: nextFixture,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        return new Response(JSON.stringify(scrapedData, null, 2), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+        
       } catch (error) {
-        console.error('Error updating fixture:', error);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: error.message 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
-    };
-    
-    // Auto-update every 30 seconds
-    setInterval(updateFixtureText, UPDATE_INTERVAL);
-    
-    await mindarThree.start();
-    renderer.setAnimationLoop(() => {
-      renderer.render(scene, camera);
-    });
+    }
+
+    // NORMAL MODE: Read from GitHub JSON file
+    try {
+      const cacheBuster = Date.now();
+      const jsonResponse = await fetch(
+        `https://raw.githubusercontent.com/andyesgrove/MindAR/main/fixtures.json?cb=${cacheBuster}`,
+        {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+          }
+        }
+      );
+      
+      const fixtureData = await jsonResponse.json();
+      
+      return new Response(JSON.stringify({
+        success: true,
+        fixture: fixtureData.nextFixture
+      }), {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      });
+      
+    } catch (error) {
+      const mockData = {
+        success: true,
+        fixture: {
+          homeTeam: 'AFC Whyteleafe',
+          awayTeam: 'Tadley Calleva',
+          date: '2026-01-18',
+          competition: 'Combined Counties League',
+          venue: 'Church Road'
+        }
+      };
+      
+      return new Response(JSON.stringify(mockData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
-  start();
-});
+};
